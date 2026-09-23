@@ -113,6 +113,22 @@ function ensureBillsForPeriod(period){
   if(!period || !Array.isArray(period.items) || !Array.isArray(data.bills)) return;
   const dates=billDatesForPeriod(period.label);
   if(!dates.length) return;
+  const allowed=new Set();
+  dates.forEach(({date,day})=>{
+    data.bills.forEach((b,bi)=>{
+      if(Number(b[2])!==day) return;
+      allowed.add(bi+"@"+date.getFullYear()+"-"+(date.getMonth()+1)+"-"+day);
+    });
+  });
+
+  // Correct older versions that placed a recurring bill in the wrong pay period.
+  // Only remove auto-generated bill rows (identified by their generated key).
+  // Never touch Fixed/Zack/Nicole/Misc/Unexpected expenses.
+  period.items = period.items.filter(x=>{
+    if(x[3]!=="bills" || !x[4]) return true;
+    return allowed.has(String(x[4]));
+  });
+
   const existing=new Set(period.items.filter(x=>x[3]==="bills").map(x=>String(x[4]||"")));
   dates.forEach(({date,day})=>{
     data.bills.forEach((b,bi)=>{
