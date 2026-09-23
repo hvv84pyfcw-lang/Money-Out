@@ -19,7 +19,7 @@
 header{background:#1c1c1e;color:#fff;padding:calc(env(safe-area-inset-top) + 12px) 16px 13px;position:sticky;top:0;z-index:20}.head{display:flex;justify-content:space-between;align-items:center}.brand{font-size:23px;font-weight:800}.subtitle{font-size:12px;color:#b7b7bc;margin-top:3px}.head button{border:0;background:#303033;color:#fff;border-radius:12px;padding:9px 11px;font-size:17px}
 main{max-width:900px;margin:auto;padding:12px 12px 100px}.periodnav{display:flex;align-items:center;gap:8px;margin-bottom:10px}.periodnav button{width:40px;height:38px;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:20px}.perioddelete{width:40px;height:38px;border:1px solid #efcaca;background:#fff5f5;color:#b42318;border-radius:12px;font-size:17px}.periodname{flex:1;text-align:center;font-weight:800}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:12px}.card span{font-size:11px;color:var(--muted)}.card b{display:block;font-size:19px;margin-top:3px}
-.panel{background:#fff;border:1px solid var(--line);border-radius:17px;overflow:hidden;margin-bottom:12px}.panelhead{padding:13px;display:flex;justify-content:space-between;align-items:center}.panelhead h2{font-size:17px;margin:0}.add{border:0;background:var(--accent);color:#fff;font-weight:800;border-radius:10px;padding:8px 11px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:17px;overflow:hidden;margin-bottom:12px}.income-row{display:flex;align-items:center;padding:11px 13px;border-top:1px solid var(--line)}.income-info{flex:1}.incomename{font-weight:700}.incomeamount{font-weight:750;margin-right:8px}.panelhead{padding:13px;display:flex;justify-content:space-between;align-items:center}.panelhead h2{font-size:17px;margin:0}.add{border:0;background:var(--accent);color:#fff;font-weight:800;border-radius:10px;padding:8px 11px}
 .cols{display:grid;grid-template-columns:minmax(145px,1fr) 82px 82px 70px}.headrow{background:#f7f7f8;color:#777;font-size:10px;font-weight:800;text-transform:uppercase}.cell{padding:7px 7px;min-height:43px;border-top:1px solid var(--line);display:flex;align-items:center}.name{font-weight:700}.money{width:100%;padding:7px 4px;border:1px solid #d5d5da;border-radius:8px;font-size:13px;text-align:right;background:#fff}.diff{justify-content:flex-end;text-align:right;font-size:12px;font-weight:800}.good{color:#25802c}.bad{color:#c42e2e}
 .section .cell{grid-column:1/-1;font-weight:800}.gray .cell{background:#d9d9d9}.yellow .cell{background:#fff19b}.pink .cell{background:#efb6b6}.blue .cell{background:#a9c9ed}.total .cell{background:#efbd7e;font-weight:850}
 .bill{display:flex;align-items:center;padding:11px 13px;border-top:1px solid var(--line)}.billinfo{flex:1}.billname{font-weight:700}.billdue{font-size:11px;color:var(--muted)}.billamount{font-weight:750;margin-right:8px}.tiny{border:0;background:#eeeef0;border-radius:8px;padding:7px 9px}
@@ -48,6 +48,7 @@ main{max-width:900px;margin:auto;padding:12px 12px 100px}.periodnav{display:flex
 <main>
 <div class="periodnav"><button onclick="move(-1)">‹</button><div class="periodname" id="periodname"></div><button onclick="move(1)">›</button><button class="perioddelete" onclick="deletePeriod()" aria-label="Delete pay period">🗑️</button></div>
 <div class="cards"><div class="card"><span>Income</span><b id="income"></b></div><div class="card"><span>Planned</span><b id="planned"></b></div><div class="card"><span>Actual</span><b id="actual"></b></div><div class="card"><span>Remaining</span><b id="remaining"></b></div></div>
+<section class="panel"><div class="panelhead"><h2>Income</h2><button class="add" onclick="addIncome()">＋ Income</button></div><div id="incomerows"></div></section>
 <section class="panel"><div class="panelhead"><h2>Budget</h2><button class="add" onclick="addExpense()">＋ Expense</button></div>
 <div class="cols headrow"><div class="cell">Expense</div><div class="cell">Planned</div><div class="cell">Actual</div><div class="cell">Diff.</div></div>
 <div id="rows"></div></section>
@@ -60,9 +61,16 @@ const PUBLIC_SAFE_START = true;
 
 const KEY="MoneyOutPWA.v3";
 let data=JSON.parse(localStorage.getItem(KEY)||"null")||{
-  periods:[{label:"Current Pay Period",income:0,items:[]}],
+  periods:[{label:"Current Pay Period",income:0,incomeItems:[],items:[]}],
   bills:[]
 };
+// Non-destructive migration: convert any legacy single income amount into one income line.
+data.periods.forEach(p=>{
+  if(!Array.isArray(p.incomeItems)){
+    const old=Number(p.income||0);
+    p.incomeItems=old ? [{id:"legacy-"+Math.random().toString(36).slice(2),name:"Income",amount:old}] : [];
+  }
+});
 let pi=0,modalMode="",edit=-1;
 const $=x=>document.getElementById(x);
 const money=n=>"$"+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -123,9 +131,11 @@ function render(){
   ensureBillsForPeriod(p);
   const planned=p.items.reduce((s,x)=>s+Number(x[1]||0),0);
   const actual=p.items.reduce((s,x)=>s+Number(x[2]||0),0);
+  const totalIncome=(p.incomeItems||[]).reduce((s,x)=>s+Number(x.amount||0),0);
+  p.income=totalIncome;
   $("subtitle").textContent="Budget • "+p.label;
   $("periodname").textContent=p.label;
-  $("income").textContent=money(p.income);
+  $("income").textContent=money(totalIncome);
   $("planned").textContent=money(planned);
   $("actual").textContent=money(actual);
   $("remaining").textContent=money(p.income-actual);
@@ -136,6 +146,7 @@ function render(){
     ["blue","Miscellaneous"],
     ["bills","Bills"]
   ];
+  $("incomerows").innerHTML=(p.incomeItems||[]).map((x,i)=>`<div class="income-row"><div class="income-info"><div class="incomename">${escapeHtml(x.name)}</div></div><div class="incomeamount">${money(x.amount)}</div><button class="tiny" onclick="editIncome(${i})">Edit</button></div>`).join("") || '<div class="income-row"><div class="income-info" style="color:var(--muted)">No income added yet.</div></div>';
   let out="";
   groups.forEach(g=>{
     const arr=p.items.map((x,i)=>[x,i]).filter(a=>a[0][3]===g[0]);
@@ -160,7 +171,22 @@ function render(){
 function ord(n){return n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"}
 function setItem(i,k,v){data.periods[pi].items[i][k]=v===""?"":Number(v);save();render()}
 function move(n){pi=Math.max(0,Math.min(data.periods.length-1,pi+n));render()}
-function incomeEdit(){let v=prompt("Income for "+data.periods[pi].label,data.periods[pi].income);if(v!==null){data.periods[pi].income=Number(v)||0;save();render()}}
+function incomeEdit(){addIncome()}
+function escapeHtml(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+function addIncome(){
+  modalMode="income";edit=-1;
+  $("mtitle").textContent="Add Income";
+  $("form").innerHTML=`<div class="field"><label>Income source</label><input id="n" placeholder="Work, overtime, reimbursement, etc."></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" placeholder="0.00"></div>`;
+  $("modal").classList.add("open")
+}
+function editIncome(i){
+  modalMode="income";edit=i;const x=data.periods[pi].incomeItems[i];
+  $("mtitle").textContent="Edit Income";
+  $("form").innerHTML=`<div class="field"><label>Income source</label><input id="n" value="${escapeHtml(x.name)}"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" value="${x.amount??0}"></div><button class="deletebtn" type="button" onclick="deleteIncome(${i})">Delete Income</button>`;
+  $("modal").classList.add("open")
+}
+function deleteIncome(i){if(!confirm("Delete this income?"))return;data.periods[pi].incomeItems.splice(i,1);data.periods[pi].income=data.periods[pi].incomeItems.reduce((s,x)=>s+Number(x.amount||0),0);save();closeModal();render()}
+
 
 function deletePeriod(){
   if(data.periods.length<=1){
@@ -178,13 +204,12 @@ function deletePeriod(){
 function newPeriod(){
   const l=prompt("Pay period (example: 10/9 – 10/23)");
   if(!l)return;
-  const inc=prompt("Income","0");
   const previous=data.periods[pi];
   const items=templateItemsFrom(previous);
-  const next={label:l,income:Number(inc)||0,items};
+  // Income is intentionally NOT carried forward. Add income separately for each period.
+  const next={label:l,income:0,incomeItems:[],items};
   data.periods.push(next);
   pi=data.periods.length-1;
-  // Recurring bills are automatically inserted into this period by due date.
   ensureBillsForPeriod(next);
   save();
   render();
@@ -212,6 +237,10 @@ function saveModal(){
   if(modalMode==="expense"){
     let item=[n,a,$("b").value===""?"":Number($("b").value),$("c").value];
     if(edit<0)data.periods[pi].items.push(item);else data.periods[pi].items[edit]=item;
+  }else if(modalMode==="income"){
+    const item={id:edit<0?"income-"+Date.now():data.periods[pi].incomeItems[edit].id,name:n,amount:a};
+    if(edit<0)data.periods[pi].incomeItems.push(item);else data.periods[pi].incomeItems[edit]=item;
+    data.periods[pi].income=data.periods[pi].incomeItems.reduce((s,x)=>s+Number(x.amount||0),0);
   }else{
     let d=Math.min(31,Math.max(1,Number($("c").value)||1));
     if(edit<0)data.bills.push([n,a,d]);else data.bills[edit]=[n,a,d];
