@@ -48,24 +48,153 @@ main{max-width:900px;margin:auto;padding:12px 12px 100px}.periodnav{display:flex
 <script>
 const PUBLIC_SAFE_START = true;
 
-const KEY="MoneyOutPWA.v2";
-let data=JSON.parse(localStorage.getItem("MoneyOutPWA.v2")||"null")||{
-periods:[{label:"Current Pay Period",income:0,items:[]}],
-bills:[]
-};let pi=0,modalMode="",edit=-1;
-const $=x=>document.getElementById(x); const money=n=>"$"+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const KEY="MoneyOutPWA.v3";
+let data=JSON.parse(localStorage.getItem(KEY)||"null")||{
+  periods:[{label:"Current Pay Period",income:0,items:[]}],
+  bills:[]
+};
+let pi=0,modalMode="",edit=-1;
+const $=x=>document.getElementById(x);
+const money=n=>"$"+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// Expense templates that automatically carry into every NEW pay period.
+// Actual spending always resets to blank/0 for the new period.
+function templateItemsFrom(period){
+  return period.items
+    .filter(x=>x[3]!=="bills")
+    .map(x=>[x[0], Number(x[1]||0), "", x[3]]);
+}
+
+function parsePeriod(label){
+  const m=String(label).match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*[–-]\s*(\d{1,2})\s*\/\s*(\d{1,2})/);
+  if(!m) return null;
+  let sm=+m[1], sd=+m[2], em=+m[3], ed=+m[4];
+  let sy=2026, ey=2026;
+  if(em<sm || (em===sm && ed<sd)) ey=sy+1;
+  return {start:new Date(sy,sm-1,sd), end:new Date(ey,em-1,ed)};
+}
+
+function billDatesForPeriod(label){
+  const r=parsePeriod(label);
+  if(!r) return [];
+  const out=[];
+  let cur=new Date(r.start.getFullYear(),r.start.getMonth(),1);
+  const endMonth=new Date(r.end.getFullYear(),r.end.getMonth(),1);
+  while(cur<=endMonth){
+    for(let day=1;day<=31;day++){
+      const d=new Date(cur.getFullYear(),cur.getMonth(),day);
+      if(d.getMonth()!==cur.getMonth()) break;
+      if(d>=r.start && d<=r.end) out.push({date:d,day});
+    }
+    cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);
+  }
+  return out;
+}
+
+function ensureBillsForPeriod(period){
+  if(!period || !Array.isArray(period.items) || !Array.isArray(data.bills)) return;
+  const dates=billDatesForPeriod(period.label);
+  if(!dates.length) return;
+  const existing=new Set(period.items.filter(x=>x[3]==="bills").map(x=>String(x[4]||"")));
+  dates.forEach(({date,day})=>{
+    data.bills.forEach((b,bi)=>{
+      if(Number(b[2])!==day) return;
+      const key=bi+"@"+date.getFullYear()+"-"+(date.getMonth()+1)+"-"+day;
+      if(existing.has(key)) return;
+      period.items.push([b[0],Number(b[1]||0),"","bills",key]);
+      existing.add(key);
+    });
+  });
+}
+
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
-function render(){let p=data.periods[pi];$("subtitle").textContent="Budget • "+p.label;$("periodname").textContent=p.label;let planned=p.items.reduce((s,x)=>s+Number(x[1]||0),0),actual=p.items.reduce((s,x)=>s+Number(x[2]||0),0);$("income").textContent=money(p.income);$("planned").textContent=money(planned);$("actual").textContent=money(actual);$("remaining").textContent=money(p.income-actual);
-let groups=[["gray","Fixed / Gray"],["yellow","Zack’s Expenses"],["pink","Nicole’s Expenses"],["blue","Miscellaneous"],["bills","Bills"]],out="";groups.forEach(g=>{let arr=p.items.map((x,i)=>[x,i]).filter(a=>a[0][3]===g[0]);if(!arr.length)return;out+=`<div class="cols section ${g[0]}"><div class="cell">${g[1]}</div></div>`;arr.forEach(([x,i])=>{let d=Number(x[2]||0)-Number(x[1]||0);out+=`<div class="cols"><div class="cell"><button class="rowedit" onclick="editExpense(${i})">✎ ${x[0]}</button></div><div class="cell"><input class="money" inputmode="decimal" value="${x[1]??''}" onchange="setItem(${i},1,this.value)"></div><div class="cell"><input class="money" inputmode="decimal" placeholder="—" value="${x[2]??''}" onchange="setItem(${i},2,this.value)"></div><div class="cell diff ${d<=0?'good':'bad'}">${Math.abs(d)<.005?'—':(d>0?'+':'')+money(d)}</div></div>`})});out+=`<div class="cols total"><div class="cell">TOTAL</div><div class="cell">${money(planned)}</div><div class="cell">${money(actual)}</div><div class="cell">${money(actual-planned)}</div></div>`;$("rows").innerHTML=out;$("billrows").innerHTML=data.bills.map((b,i)=>`<div class="bill"><div class="billinfo"><div class="billname">${b[0]}</div><div class="billdue">Due ${b[2]}${ord(b[2])}</div></div><div class="billamount">${money(b[1])}</div><button class="tiny" onclick="editBill(${i})">Edit</button></div>`).join("")}
-function ord(n){return n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"}function setItem(i,k,v){data.periods[pi].items[i][k]=v===""?"":Number(v);save();render()}function move(n){pi=Math.max(0,Math.min(data.periods.length-1,pi+n));render()}
+function render(){
+  const p=data.periods[pi];
+  ensureBillsForPeriod(p);
+  const planned=p.items.reduce((s,x)=>s+Number(x[1]||0),0);
+  const actual=p.items.reduce((s,x)=>s+Number(x[2]||0),0);
+  $("subtitle").textContent="Budget • "+p.label;
+  $("periodname").textContent=p.label;
+  $("income").textContent=money(p.income);
+  $("planned").textContent=money(planned);
+  $("actual").textContent=money(actual);
+  $("remaining").textContent=money(p.income-actual);
+  const groups=[
+    ["gray","Fixed / Gray"],
+    ["yellow","Zack’s Expenses"],
+    ["pink","Nicole’s Expenses"],
+    ["blue","Miscellaneous"],
+    ["bills","Bills"]
+  ];
+  let out="";
+  groups.forEach(g=>{
+    const arr=p.items.map((x,i)=>[x,i]).filter(a=>a[0][3]===g[0]);
+    if(!arr.length)return;
+    out+=`<div class="cols section ${g[0]}"><div class="cell">${g[1]}</div></div>`;
+    arr.forEach(([x,i])=>{
+      const d=Number(x[2]||0)-Number(x[1]||0);
+      out+=`<div class="cols">
+        <div class="cell"><button class="rowedit" onclick="editExpense(${i})">✎ ${x[0]}</button></div>
+        <div class="cell"><input class="money" inputmode="decimal" value="${x[1]??''}" onchange="setItem(${i},1,this.value)"></div>
+        <div class="cell"><input class="money" inputmode="decimal" placeholder="—" value="${x[2]??''}" onchange="setItem(${i},2,this.value)"></div>
+        <div class="cell diff ${d<=0?'good':'bad'}">${Math.abs(d)<.005?'—':(d>0?'+':'')+money(d)}</div>
+      </div>`;
+    });
+  });
+  out+=`<div class="cols total"><div class="cell">TOTAL</div><div class="cell">${money(planned)}</div><div class="cell">${money(actual)}</div><div class="cell">${money(actual-planned)}</div></div>`;
+  $("rows").innerHTML=out;
+  $("billrows").innerHTML=data.bills.map((b,i)=>`<div class="bill"><div class="billinfo"><div class="billname">${b[0]}</div><div class="billdue">Due ${b[2]}${ord(b[2])}</div></div><div class="billamount">${money(b[1])}</div><button class="tiny" onclick="editBill(${i})">Edit</button></div>`).join("");
+  save();
+}
+
+function ord(n){return n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"}
+function setItem(i,k,v){data.periods[pi].items[i][k]=v===""?"":Number(v);save();render()}
+function move(n){pi=Math.max(0,Math.min(data.periods.length-1,pi+n));render()}
 function incomeEdit(){let v=prompt("Income for "+data.periods[pi].label,data.periods[pi].income);if(v!==null){data.periods[pi].income=Number(v)||0;save();render()}}
-function newPeriod(){let l=prompt("Pay period (example: 10/9 – 10/23)");if(!l)return;let inc=prompt("Expected income","0");data.periods.push({label:l,income:Number(inc)||0,items:[]});pi=data.periods.length-1;save();render()}
-function editExpense(i){modalMode="expense";edit=i;let x=data.periods[pi].items[i];$("mtitle").textContent="Edit Expense";$("form").innerHTML=`<div class="field"><label>Name</label><input id="n" value="${String(x[0]).replaceAll('"','&quot;')}"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" value="${x[1]??''}"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" value="${x[2]??''}"></div><div class="field"><label>Section</label><select id="c"><option value="gray" ${x[3]==='gray'?'selected':''}>Gray / Fixed</option><option value="yellow" ${x[3]==='yellow'?'selected':''}>Zack’s Expenses</option><option value="pink" ${x[3]==='pink'?'selected':''}>Nicole’s Expenses</option><option value="blue" ${x[3]==='blue'?'selected':''}>Miscellaneous</option><option value="bills" ${x[3]==='bills'?'selected':''}>Bills</option></select></div><button class="deletebtn" type="button" onclick="deleteExpense(${i})">Delete Expense</button>`;$("modal").classList.add("open")}
+
+function newPeriod(){
+  const l=prompt("Pay period (example: 10/9 – 10/23)");
+  if(!l)return;
+  const inc=prompt("Expected income","0");
+  const previous=data.periods[pi];
+  const items=templateItemsFrom(previous);
+  const next={label:l,income:Number(inc)||0,items};
+  data.periods.push(next);
+  pi=data.periods.length-1;
+  // Recurring bills are automatically inserted into this period by due date.
+  ensureBillsForPeriod(next);
+  save();
+  render();
+}
+
+function editExpense(i){
+  modalMode="expense";edit=i;
+  const x=data.periods[pi].items[i];
+  $("mtitle").textContent="Edit Expense";
+  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" value="${String(x[0]).replaceAll('"','&quot;')}"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" value="${x[1]??''}"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" value="${x[2]??''}"></div><div class="field"><label>Section</label><select id="c"><option value="gray" ${x[3]==='gray'?'selected':''}>Gray / Fixed</option><option value="yellow" ${x[3]==='yellow'?'selected':''}>Zack’s Expenses</option><option value="pink" ${x[3]==='pink'?'selected':''}>Nicole’s Expenses</option><option value="blue" ${x[3]==='blue'?'selected':''}>Miscellaneous</option><option value="bills" ${x[3]==='bills'?'selected':''}>Bills</option></select></div><button class="deletebtn" type="button" onclick="deleteExpense(${i})">Delete Expense</button>`;
+  $("modal").classList.add("open")
+}
 function deleteExpense(i){if(!confirm("Delete this expense?"))return;data.periods[pi].items.splice(i,1);save();closeModal();render()}
-function addExpense(){modalMode="expense";edit=-1;$("mtitle").textContent="Add Expense";$("form").innerHTML=`<div class="field"><label>Name</label><input id="n" placeholder="Groceries"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Section</label><select id="c"><option value="gray">Gray / Fixed</option><option value="yellow">Zack’s Expenses</option><option value="pink">Nicole’s Expenses</option><option value="blue">Miscellaneous</option><option value="bills">Bills</option></select></div>`;$("modal").classList.add("open")}
+function addExpense(){
+  modalMode="expense";edit=-1;
+  $("mtitle").textContent="Add Expense";
+  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" placeholder="Groceries"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Section</label><select id="c"><option value="gray">Gray / Fixed</option><option value="yellow">Zack’s Expenses</option><option value="pink">Nicole’s Expenses</option><option value="blue">Miscellaneous</option><option value="bills">Bills</option></select></div>`;
+  $("modal").classList.add("open")
+}
 function addBill(){modalMode="bill";edit=-1;$("mtitle").textContent="Add Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" placeholder="Electric"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" placeholder="15"></div>`;$("modal").classList.add("open")}
 function editBill(i){modalMode="bill";edit=i;let b=data.bills[i];$("mtitle").textContent="Edit Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" value="${b[0]}"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" value="${b[1]}"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" value="${b[2]}"></div>`;$("modal").classList.add("open")}
-function saveModal(){let n=$("n").value.trim(),a=Number($("a").value)||0;if(!n)return;if(modalMode==="expense"){let item=[n,a,$("b").value===""?"":Number($("b").value),$("c").value];if(edit<0)data.periods[pi].items.push(item);else data.periods[pi].items[edit]=item}else{let d=Math.min(31,Math.max(1,Number($("c").value)||1));if(edit<0)data.bills.push([n,a,d]);else data.bills[edit]=[n,a,d]}save();closeModal();render()}
-function closeModal(){$("modal").classList.remove("open")}render();
-</script>
+function saveModal(){
+  let n=$("n").value.trim(),a=Number($("a").value)||0;
+  if(!n)return;
+  if(modalMode==="expense"){
+    let item=[n,a,$("b").value===""?"":Number($("b").value),$("c").value];
+    if(edit<0)data.periods[pi].items.push(item);else data.periods[pi].items[edit]=item;
+  }else{
+    let d=Math.min(31,Math.max(1,Number($("c").value)||1));
+    if(edit<0)data.bills.push([n,a,d]);else data.bills[edit]=[n,a,d];
+  }
+  save();closeModal();render();
+}
+function closeModal(){$("modal").classList.remove("open")}
+render();</script>
 </body></html>
