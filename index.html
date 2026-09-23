@@ -22,7 +22,7 @@ main{max-width:900px;margin:auto;padding:12px 12px 100px}.periodnav{display:flex
 .panel{background:#fff;border:1px solid var(--line);border-radius:17px;overflow:hidden;margin-bottom:12px}.income-row{display:flex;align-items:center;padding:11px 13px;border-top:1px solid var(--line)}.income-info{flex:1}.incomename{font-weight:700}.incomeamount{font-weight:750;margin-right:8px}.panelhead{padding:13px;display:flex;justify-content:space-between;align-items:center}.panelhead h2{font-size:17px;margin:0}.add{border:0;background:var(--accent);color:#fff;font-weight:800;border-radius:10px;padding:8px 11px}
 .cols{display:grid;grid-template-columns:minmax(145px,1fr) 82px 82px 70px}.headrow{background:#f7f7f8;color:#777;font-size:10px;font-weight:800;text-transform:uppercase}.cell{padding:7px 7px;min-height:43px;border-top:1px solid var(--line);display:flex;align-items:center}.name{font-weight:700}.money{width:100%;padding:7px 4px;border:1px solid #d5d5da;border-radius:8px;font-size:13px;text-align:right;background:#fff}.diff{justify-content:flex-end;text-align:right;font-size:12px;font-weight:800}.good{color:#25802c}.bad{color:#c42e2e}
 .section .cell{grid-column:1/-1;font-weight:800}.gray .cell{background:#d9d9d9}.yellow .cell{background:#fff19b}.pink .cell{background:#efb6b6}.blue .cell{background:#a9c9ed}.unexpected .cell{background:#f7d7a8}.total .cell{background:#efbd7e;font-weight:850}
-.bill{display:flex;align-items:center;padding:11px 13px;border-top:1px solid var(--line)}.billinfo{flex:1}.billname{font-weight:700}.billdue{font-size:11px;color:var(--muted)}.billamount{font-weight:750;margin-right:8px}.tiny{border:0;background:#eeeef0;border-radius:8px;padding:7px 9px}
+.bill{display:flex;align-items:center;padding:11px 13px;border-top:1px solid var(--line)}.billinfo{flex:1}.billname{font-weight:700}.billdue{font-size:11px;color:var(--muted)}.bill-inline-due{font-size:10px;font-weight:600;color:var(--muted);white-space:nowrap}.billamount{font-weight:750;margin-right:8px}.tiny{border:0;background:#eeeef0;border-radius:8px;padding:7px 9px}
 .bottom{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(15px);border-top:1px solid var(--line);padding:9px 12px calc(9px + env(safe-area-inset-bottom));z-index:30}.bottomin{max-width:900px;margin:auto;display:flex;gap:8px}.bottom button{flex:1;border:0;border-radius:12px;padding:12px;font-weight:800}.greenbtn{background:var(--accent);color:#fff}.lightbtn{background:#ececf0}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:50;align-items:flex-end}.modal.open{display:flex}.sheet{background:#fff;width:100%;max-height:90vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}.sheet h3{margin:0 0 13px}.field{margin:10px 0}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}.field input,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-size:16px}.deletebtn{width:100%;margin-top:10px;border:0;background:#ffe5e5;color:#b42318;border-radius:12px;padding:14px;font-weight:800;font-size:16px}.actions{display:flex;gap:8px;margin-top:16px}.actions button{flex:1;border:0;border-radius:11px;padding:12px;font-weight:800}.cancel{background:#ececf0}.savebtn{background:var(--accent);color:#fff}
 @media(min-width:700px){.cards{grid-template-columns:repeat(4,1fr)}}@media(max-width:360px){.cols{grid-template-columns:minmax(125px,1fr) 70px 70px 62px}.money{font-size:12px}}
@@ -140,11 +140,11 @@ function render(){
   $("actual").textContent=money(actual);
   $("remaining").textContent=money(p.income-actual);
   const groups=[
-    ["bills","Bills"],
     ["gray","Fixed / Gray"],
     ["yellow","Zack’s Expenses"],
     ["pink","Nicole’s Expenses"],
     ["blue","Miscellaneous"],
+    ["bills","Bills"],
     ["unexpected","Unexpected Expenses"]
   ];
   $("incomerows").innerHTML=(p.incomeItems||[]).map((x,i)=>`<div class="income-row"><div class="income-info"><div class="incomename">${escapeHtml(x.name)}</div></div><div class="incomeamount">${money(x.amount)}</div><button class="tiny" onclick="editIncome(${i})">Edit</button></div>`).join("") || '<div class="income-row"><div class="income-info" style="color:var(--muted)">No income added yet.</div></div>';
@@ -157,7 +157,7 @@ function render(){
     arr.forEach(([x,i])=>{
       const d=Number(x[1]||0)-Number(x[2]||0);
       out+=`<div class="cols">
-        <div class="cell"><button class="rowedit" onclick="editExpense(${i})">✎ ${x[0]}</button></div>
+        <div class="cell"><button class="rowedit" onclick="editExpense(${i})">✎ ${escapeHtml(x[0])}${g[0]==="bills" ? ` <span class="bill-inline-due">(${billDueText(x)})</span>` : ""}</button></div>
         <div class="cell"><input class="money" inputmode="decimal" value="${x[1]??''}" onchange="setItem(${i},1,this.value)"></div>
         <div class="cell"><input class="money" inputmode="decimal" placeholder="—" value="${x[2]??''}" onchange="setItem(${i},2,this.value)"></div>
         <div class="cell diff ${d>=0?'good':'bad'}">${Math.abs(d)<.005?'—':(d>0?'+':'')+money(d)}</div>
@@ -171,6 +171,14 @@ function render(){
 }
 
 function ord(n){return n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"}
+function billDueText(x){
+  if(String(x[3])!=="bills") return "";
+  const key=String(x[4]||"");
+  const m=key.match(/@\d{4}-\d{1,2}-(\d{1,2})$/);
+  if(m) return "Due "+Number(m[1])+ord(Number(m[1]));
+  const b=data.bills.find(b=>String(b[0])===String(x[0]));
+  return b ? "Due "+Number(b[2])+ord(Number(b[2])) : "";
+}
 function setItem(i,k,v){data.periods[pi].items[i][k]=v===""?"":Number(v);save();render()}
 function move(n){pi=Math.max(0,Math.min(data.periods.length-1,pi+n));render()}
 function incomeEdit(){addIncome()}
