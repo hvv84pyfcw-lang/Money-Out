@@ -153,7 +153,7 @@ function render(){
     if(!arr.length)return;
     out+=`<div class="cols section ${g[0]}"><div class="cell">${g[1]}</div></div>`;
     arr.forEach(([x,i])=>{
-      const d=Number(x[2]||0)-Number(x[1]||0);
+      const d=Number(x[1]||0)-Number(x[2]||0);
       out+=`<div class="cols">
         <div class="cell"><button class="rowedit" onclick="editExpense(${i})">✎ ${x[0]}</button></div>
         <div class="cell"><input class="money" inputmode="decimal" value="${x[1]??''}" onchange="setItem(${i},1,this.value)"></div>
@@ -162,7 +162,7 @@ function render(){
       </div>`;
     });
   });
-  out+=`<div class="cols total"><div class="cell">TOTAL</div><div class="cell">${money(planned)}</div><div class="cell">${money(actual)}</div><div class="cell">${money(actual-planned)}</div></div>`;
+  out+=`<div class="cols total"><div class="cell">TOTAL</div><div class="cell">${money(planned)}</div><div class="cell">${money(actual)}</div><div class="cell">${money(planned-actual)}</div></div>`;
   $("rows").innerHTML=out;
   $("billrows").innerHTML=data.bills.map((b,i)=>`<div class="bill"><div class="billinfo"><div class="billname">${b[0]}</div><div class="billdue">Due ${b[2]}${ord(b[2])}</div></div><div class="billamount">${money(b[1])}</div><button class="tiny" onclick="editBill(${i})">Edit</button></div>`).join("");
   save();
