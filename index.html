@@ -6,16 +6,6 @@
   // App updates must preserve all saved pay periods, expenses, and bills.
   const MONEY_OUT_NON_DESTRUCTIVE = true;
 </script>
-<script>
-try {
-  if (!localStorage.getItem("MoneyOutPublicSafeV2")) {
-    /* intentionally never delete saved budget data */
-    localStorage.removeItem("MoneyOutPWA.v2");
-    localStorage.setItem("MoneyOutPublicSafeV2", "1");
-  }
-} catch(e) {}
-</script>
-
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1c1c1e">
@@ -27,7 +17,7 @@ try {
 :root{--bg:#f2f2f7;--card:#fff;--ink:#171717;--muted:#73777d;--line:#d9d9df;--green:#d8ef9c;--yellow:#fff19b;--pink:#efb6b6;--blue:#a9c9ed;--orange:#efbd7e;--accent:#16834b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif}
 header{background:#1c1c1e;color:#fff;padding:calc(env(safe-area-inset-top) + 12px) 16px 13px;position:sticky;top:0;z-index:20}.head{display:flex;justify-content:space-between;align-items:center}.brand{font-size:23px;font-weight:800}.subtitle{font-size:12px;color:#b7b7bc;margin-top:3px}.head button{border:0;background:#303033;color:#fff;border-radius:12px;padding:9px 11px;font-size:17px}
-main{max-width:900px;margin:auto;padding:12px 12px 100px}.periodnav{display:flex;align-items:center;gap:8px;margin-bottom:10px}.periodnav button{width:40px;height:38px;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:20px}.periodname{flex:1;text-align:center;font-weight:800}
+main{max-width:900px;margin:auto;padding:12px 12px 100px}.periodnav{display:flex;align-items:center;gap:8px;margin-bottom:10px}.periodnav button{width:40px;height:38px;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:20px}.perioddelete{width:40px;height:38px;border:1px solid #efcaca;background:#fff5f5;color:#b42318;border-radius:12px;font-size:17px}.periodname{flex:1;text-align:center;font-weight:800}
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:12px}.card span{font-size:11px;color:var(--muted)}.card b{display:block;font-size:19px;margin-top:3px}
 .panel{background:#fff;border:1px solid var(--line);border-radius:17px;overflow:hidden;margin-bottom:12px}.panelhead{padding:13px;display:flex;justify-content:space-between;align-items:center}.panelhead h2{font-size:17px;margin:0}.add{border:0;background:var(--accent);color:#fff;font-weight:800;border-radius:10px;padding:8px 11px}
 .cols{display:grid;grid-template-columns:minmax(145px,1fr) 82px 82px 70px}.headrow{background:#f7f7f8;color:#777;font-size:10px;font-weight:800;text-transform:uppercase}.cell{padding:7px 7px;min-height:43px;border-top:1px solid var(--line);display:flex;align-items:center}.name{font-weight:700}.money{width:100%;padding:7px 4px;border:1px solid #d5d5da;border-radius:8px;font-size:13px;text-align:right;background:#fff}.diff{justify-content:flex-end;text-align:right;font-size:12px;font-weight:800}.good{color:#25802c}.bad{color:#c42e2e}
@@ -41,7 +31,7 @@ main{max-width:900px;margin:auto;padding:12px 12px 100px}.periodnav{display:flex
 <body>
 <header><div class="head"><div><div class="brand">Money Out</div><div class="subtitle" id="subtitle"></div></div><button onclick="incomeEdit()">💰</button></div></header>
 <main>
-<div class="periodnav"><button onclick="move(-1)">‹</button><div class="periodname" id="periodname"></div><button onclick="move(1)">›</button></div>
+<div class="periodnav"><button onclick="move(-1)">‹</button><div class="periodname" id="periodname"></div><button onclick="move(1)">›</button><button class="perioddelete" onclick="deletePeriod()" aria-label="Delete pay period">🗑️</button></div>
 <div class="cards"><div class="card"><span>Income</span><b id="income"></b></div><div class="card"><span>Planned</span><b id="planned"></b></div><div class="card"><span>Actual</span><b id="actual"></b></div><div class="card"><span>Remaining</span><b id="remaining"></b></div></div>
 <section class="panel"><div class="panelhead"><h2>Budget</h2><button class="add" onclick="addExpense()">＋ Expense</button></div>
 <div class="cols headrow"><div class="cell">Expense</div><div class="cell">Planned</div><div class="cell">Actual</div><div class="cell">Diff.</div></div>
@@ -156,6 +146,19 @@ function ord(n){return n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10=
 function setItem(i,k,v){data.periods[pi].items[i][k]=v===""?"":Number(v);save();render()}
 function move(n){pi=Math.max(0,Math.min(data.periods.length-1,pi+n));render()}
 function incomeEdit(){let v=prompt("Income for "+data.periods[pi].label,data.periods[pi].income);if(v!==null){data.periods[pi].income=Number(v)||0;save();render()}}
+
+function deletePeriod(){
+  if(data.periods.length<=1){
+    alert("You need to keep at least one pay period.");
+    return;
+  }
+  const label=data.periods[pi].label;
+  if(!confirm('Delete pay period "'+label+'"? This will only delete this pay period. Your other pay periods and recurring bills will stay.')) return;
+  data.periods.splice(pi,1);
+  pi=Math.max(0,Math.min(pi,data.periods.length-1));
+  save();
+  render();
+}
 
 function newPeriod(){
   const l=prompt("Pay period (example: 10/9 – 10/23)");
