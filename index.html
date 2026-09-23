@@ -27,6 +27,21 @@ main{max-width:900px;margin:auto;padding:12px 12px 100px}.periodnav{display:flex
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:50;align-items:flex-end}.modal.open{display:flex}.sheet{background:#fff;width:100%;max-height:90vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}.sheet h3{margin:0 0 13px}.field{margin:10px 0}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}.field input,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-size:16px}.deletebtn{width:100%;margin-top:10px;border:0;background:#ffe5e5;color:#b42318;border-radius:12px;padding:14px;font-weight:800;font-size:16px}.actions{display:flex;gap:8px;margin-top:16px}.actions button{flex:1;border:0;border-radius:11px;padding:12px;font-weight:800}.cancel{background:#ececf0}.savebtn{background:var(--accent);color:#fff}
 @media(min-width:700px){.cards{grid-template-columns:repeat(4,1fr)}}@media(max-width:360px){.cols{grid-template-columns:minmax(125px,1fr) 70px 70px 62px}.money{font-size:12px}}
 </style>
+
+<script>
+(function(){
+  // Variable-income support. Existing saved data is preserved.
+  function moneyOutEnsureIncome(period) {
+    if (!period) return;
+    if (!Array.isArray(period.incomeItems)) {
+      const old = Number(period.income || 0);
+      period.incomeItems = old ? [{id:"income-"+Date.now(), name:"Income", planned:old, actual:old}] : [];
+    }
+  }
+  window.moneyOutEnsureIncome = moneyOutEnsureIncome;
+})();
+</script>
+
 </head>
 <body>
 <header><div class="head"><div><div class="brand">Money Out</div><div class="subtitle" id="subtitle"></div></div><button onclick="incomeEdit()">💰</button></div></header>
@@ -163,7 +178,7 @@ function deletePeriod(){
 function newPeriod(){
   const l=prompt("Pay period (example: 10/9 – 10/23)");
   if(!l)return;
-  const inc=prompt("Expected income","0");
+  const inc=prompt("Income","0");
   const previous=data.periods[pi];
   const items=templateItemsFrom(previous);
   const next={label:l,income:Number(inc)||0,items};
