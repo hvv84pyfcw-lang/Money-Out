@@ -1,0 +1,9 @@
+{
+  "name": "Money Out Tracker",
+  "short_name": "Money Out",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#1c1c1e",
+  "icons": []
+}
