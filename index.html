@@ -113,14 +113,18 @@ function ensureBillsForPeriod(period){
   if(!period || !Array.isArray(period.items) || !Array.isArray(data.bills)) return;
   const dates=billDatesForPeriod(period.label);
   if(!dates.length) return;
-  const existing=new Set(period.items.filter(x=>x[3]==="bills").map(x=>String(x[4]||"")));
+  // Add any recurring bills due in this pay period to the Budget section.
+  // This is additive only: existing expenses are never removed or overwritten.
+  const existingNames=new Set(period.items.filter(x=>x[3]==="bills").map(x=>String(x[0])));
   dates.forEach(({date,day})=>{
     data.bills.forEach((b,bi)=>{
       if(Number(b[2])!==day) return;
+      // A pay period normally contains each bill at most once. If an older
+      // version already inserted it without a key, recognize it by name.
+      if(existingNames.has(String(b[0]))) return;
       const key=bi+"@"+date.getFullYear()+"-"+(date.getMonth()+1)+"-"+day;
-      if(existing.has(key)) return;
       period.items.push([b[0],Number(b[1]||0),"","bills",key]);
-      existing.add(key);
+      existingNames.add(String(b[0]));
     });
   });
 }
