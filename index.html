@@ -140,12 +140,12 @@ function render(){
   $("actual").textContent=money(actual);
   $("remaining").textContent=money(p.income-actual);
   const groups=[
+    ["bills","Bills"],
     ["gray","Fixed / Gray"],
     ["yellow","Zack’s Expenses"],
     ["pink","Nicole’s Expenses"],
     ["blue","Miscellaneous"],
-    ["unexpected","Unexpected Expenses"],
-    ["bills","Bills"]
+    ["unexpected","Unexpected Expenses"]
   ];
   $("incomerows").innerHTML=(p.incomeItems||[]).map((x,i)=>`<div class="income-row"><div class="income-info"><div class="incomename">${escapeHtml(x.name)}</div></div><div class="incomeamount">${money(x.amount)}</div><button class="tiny" onclick="editIncome(${i})">Edit</button></div>`).join("") || '<div class="income-row"><div class="income-info" style="color:var(--muted)">No income added yet.</div></div>';
   let out="";
