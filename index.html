@@ -79,7 +79,7 @@ const money=n=>"$"+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:
 // Actual spending always resets to blank/0 for the new period.
 function templateItemsFrom(period){
   return period.items
-    .filter(x=>x[3]!=="bills")
+    .filter(x=>x[3]!=="bills" && x[3]!=="unexpected")
     .map(x=>[x[0], Number(x[1]||0), "", x[3]]);
 }
 
@@ -157,7 +157,8 @@ function render(){
     ["yellow","Zack’s Expenses"],
     ["pink","Nicole’s Expenses"],
     ["blue","Miscellaneous"],
-    ["bills","Bills"]
+    ["bills","Bills"],
+    ["unexpected","Unexpected Expenses"]
   ];
   $("incomerows").innerHTML=(p.incomeItems||[]).map((x,i)=>`<div class="income-row"><div class="income-info"><div class="incomename">${escapeHtml(x.name)}</div></div><div class="incomeamount">${money(x.amount)}</div><button class="tiny" onclick="editIncome(${i})">Edit</button></div>`).join("") || '<div class="income-row"><div class="income-info" style="color:var(--muted)">No income added yet.</div></div>';
   let out="";
@@ -234,14 +235,14 @@ function editExpense(i){
   modalMode="expense";edit=i;
   const x=data.periods[pi].items[i];
   $("mtitle").textContent="Edit Expense";
-  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" value="${String(x[0]).replaceAll('"','&quot;')}"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" value="${x[1]??''}"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" value="${x[2]??''}"></div><div class="field"><label>Section</label><select id="c"><option value="gray" ${x[3]==='gray'?'selected':''}>Gray / Fixed</option><option value="yellow" ${x[3]==='yellow'?'selected':''}>Zack’s Expenses</option><option value="pink" ${x[3]==='pink'?'selected':''}>Nicole’s Expenses</option><option value="blue" ${x[3]==='blue'?'selected':''}>Miscellaneous</option><option value="bills" ${x[3]==='bills'?'selected':''}>Bills</option></select></div><button class="deletebtn" type="button" onclick="deleteExpense(${i})">Delete Expense</button>`;
+  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" value="${String(x[0]).replaceAll('"','&quot;')}"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" value="${x[1]??''}"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" value="${x[2]??''}"></div><div class="field"><label>Section</label><select id="c"><option value="gray" ${x[3]==='gray'?'selected':''}>Gray / Fixed</option><option value="yellow" ${x[3]==='yellow'?'selected':''}>Zack’s Expenses</option><option value="pink" ${x[3]==='pink'?'selected':''}>Nicole’s Expenses</option><option value="blue" ${x[3]==='blue'?'selected':''}>Miscellaneous</option><option value="bills" ${x[3]==='bills'?'selected':''}>Bills</option><option value="unexpected" ${x[3]==='unexpected'?'selected':''}>Unexpected Expenses</option></select></div><button class="deletebtn" type="button" onclick="deleteExpense(${i})">Delete Expense</button>`;
   $("modal").classList.add("open")
 }
 function deleteExpense(i){if(!confirm("Delete this expense?"))return;data.periods[pi].items.splice(i,1);save();closeModal();render()}
 function addExpense(){
   modalMode="expense";edit=-1;
   $("mtitle").textContent="Add Expense";
-  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" placeholder="Groceries"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Section</label><select id="c"><option value="gray">Gray / Fixed</option><option value="yellow">Zack’s Expenses</option><option value="pink">Nicole’s Expenses</option><option value="blue">Miscellaneous</option><option value="bills">Bills</option></select></div>`;
+  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" placeholder="Groceries"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Section</label><select id="c"><option value="gray">Gray / Fixed</option><option value="yellow">Zack’s Expenses</option><option value="pink">Nicole’s Expenses</option><option value="blue">Miscellaneous</option><option value="bills">Bills</option><option value="unexpected">Unexpected Expenses</option></select></div>`;
   $("modal").classList.add("open")
 }
 function addBill(){modalMode="bill";edit=-1;$("mtitle").textContent="Add Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" placeholder="Electric"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" placeholder="15"></div>`;$("modal").classList.add("open")}
