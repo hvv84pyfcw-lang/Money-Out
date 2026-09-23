@@ -158,7 +158,7 @@ function render(){
         <div class="cell"><button class="rowedit" onclick="editExpense(${i})">✎ ${x[0]}</button></div>
         <div class="cell"><input class="money" inputmode="decimal" value="${x[1]??''}" onchange="setItem(${i},1,this.value)"></div>
         <div class="cell"><input class="money" inputmode="decimal" placeholder="—" value="${x[2]??''}" onchange="setItem(${i},2,this.value)"></div>
-        <div class="cell diff ${d<=0?'good':'bad'}">${Math.abs(d)<.005?'—':(d>0?'+':'')+money(d)}</div>
+        <div class="cell diff ${d>=0?'good':'bad'}">${Math.abs(d)<.005?'—':(d>0?'+':'')+money(d)}</div>
       </div>`;
     });
   });
