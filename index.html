@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
 <script>
+  // Money Out safety rule: NEVER clear or reset existing localStorage data.
+  // App updates must preserve all saved pay periods, expenses, and bills.
+  const MONEY_OUT_NON_DESTRUCTIVE = true;
+</script>
+<script>
 try {
   if (!localStorage.getItem("MoneyOutPublicSafeV2")) {
-    localStorage.removeItem("MoneyOutPWA.v1");
+    /* intentionally never delete saved budget data */
     localStorage.removeItem("MoneyOutPWA.v2");
     localStorage.setItem("MoneyOutPublicSafeV2", "1");
   }
