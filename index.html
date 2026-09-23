@@ -3,9 +3,10 @@
 <head>
 <script>
 try {
-  if (!localStorage.getItem("MoneyOutPublicSafeInitialized")) {
+  if (!localStorage.getItem("MoneyOutPublicSafeV2")) {
     localStorage.removeItem("MoneyOutPWA.v1");
-    localStorage.setItem("MoneyOutPublicSafeInitialized", "1");
+    localStorage.removeItem("MoneyOutPWA.v2");
+    localStorage.setItem("MoneyOutPublicSafeV2", "1");
   }
 } catch(e) {}
 </script>
@@ -47,21 +48,10 @@ main{max-width:900px;margin:auto;padding:12px 12px 100px}.periodnav{display:flex
 <script>
 const PUBLIC_SAFE_START = true;
 
-const KEY="MoneyOutPWA.v1";
-let data=JSON.parse(localStorage.getItem(KEY)||"null")||{
-periods:[
-{label:"9/11 – 9/23",income:7277.93,items:[
-["Home",2695,"","gray"],["Car Payment",432,"","gray"],["Car Maintenance",260.01,260.01,"gray"],["SoFi Loan",300,"","gray"],
-["Gas",150.75,150.75,"yellow"],["Groceries",500,335.01,"yellow"],["Restaurants",40,40,"yellow"],["Fun Money",50,"","yellow"],["Hair",50,"","yellow"],
-["Gas (15/wk)",130,115.61,"pink"],["Restaurants (25/wk)",90,84,"pink"],["Fun Money (40/wk)",80,80,"pink"],
-["Miscellaneous",700,698.4,"blue"],["Chiropractor",40,40,"blue"],
-["USAA Life",44.03,44.03,"bills"],["Gym",9.99,9.99,"bills"],["Alarm",22.14,22.14,"bills"],["Water",250,"","bills"],["YouTube",26.99,26.99,"bills"],["Magic Key - Liv",114.5,114.5,"bills"],["Work Apple",0.99,"","bills"],["USAA CC",87,87,"bills"],["Wells CC",87,87,"bills"],["Auto Insurance",242.02,"","bills"],["Ally Pay Back",310,310,"bills"],["Life",44.03,44.03,"bills"]]},
-{label:"9/24 – 10/8",income:7256.23,items:[
-["Home",2695,"","gray"],["Car Payment",432,"","gray"],["Car Maintenance",30,"","gray"],["SoFi Loan",300,"","gray"],
-["Gas",100,"","yellow"],["Groceries",500,"","yellow"],["Restaurants",40,"","yellow"],["Fun Money",50,"","yellow"],["Hair",50,"","yellow"],
-["Gas (15/wk)",130,"","pink"],["Restaurants (25/wk)",90,"","pink"],["Fun Money (40/wk)",80,"","pink"],["Miscellaneous",250,"","blue"],["Chiropractor",40,"","blue"],
-["Liv's Dance",90,"","bills"],["Switch",3.99,"","bills"],["Charter",86.25,"","bills"],["SoCal Gas",39.98,"","bills"],["Optery",9.99,"","bills"],["Nic Apple",115,"","bills"],["Solar",84.51,"","bills"],["USAA Life",44.03,"","bills"],["Gym",9.99,"","bills"],["Alarm",22.14,"","bills"],["Water",250,"","bills"],["YouTube",29.99,"","bills"],["Magic Key - Liv",114.5,"","bills"],["Work Apple",0.99,"","bills"],["USAA CC",87,"","bills"],["Wells CC",87,"","bills"],["Auto Insurance",242.88,"","bills"],["Zack Apple",9.99,"","bills"],["WM",67.49,"","bills"],["Magic Key",281.09,"","bills"],["Solar",80.54,"","bills"],["Verizon",124.14,"","bills"],["Spotify",11.99,"","bills"],["SoCal Edison",0,"","bills"]]}],
-bills:[["Liv's Dance",90,1],["Switch",3.99,1],["Charter",86.25,2],["SoCal Gas",39.98,3],["Optery",9.99,3],["Nic Apple",115,7],["Solar",84.51,9],["USAA Life",44.03,11],["Gym",9.99,11],["Alarm",22.14,13],["Water",250,14],["YouTube",29.99,19],["Magic Key - Liv",114.5,19],["Work Apple",.99,21],["USAA CC",87,22],["Wells CC",87,22],["Auto Insurance",242.88,22],["Zack Apple",9.99,24],["WM",67.49,24],["Magic Key",281.09,27],["Solar",80.54,27],["Verizon",124.14,28],["Spotify",11.99,28],["SoCal Edison",0,31]]
+const KEY="MoneyOutPWA.v2";
+let data=JSON.parse(localStorage.getItem("MoneyOutPWA.v2")||"null")||{
+periods:[{label:"Current Pay Period",income:0,items:[]}],
+bills:[]
 };let pi=0,modalMode="",edit=-1;
 const $=x=>document.getElementById(x); const money=n=>"$"+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 function save(){localStorage.setItem(KEY,JSON.stringify(data))}
