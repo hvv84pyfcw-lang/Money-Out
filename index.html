@@ -133,16 +133,10 @@ function save(){localStorage.setItem(KEY,JSON.stringify(data))}
 function render(){
   const p=data.periods[pi];
   ensureBillsForPeriod(p);
-  // Planned must include recurring bills due in this pay period.
-  // Bills are calculated from the master bill list so this remains correct
-  // even if a period was created before a bill was added/updated.
-  const dueBillDays=new Set(billDatesForPeriod(p.label).map(x=>x.day));
-  const dueBills=data.bills.filter(b=>dueBillDays.has(Number(b[2])));
-  const generatedBillKeys=new Set(dueBills.map((b,bi)=>bi));
-  const nonGeneratedItems=p.items.filter(x=>x[3]!=="bills" || !x[4]);
-  const plannedNonBills=nonGeneratedItems.reduce((s,x)=>s+Number(x[1]||0),0);
-  const plannedBills=dueBills.reduce((s,b)=>s+Number(b[1]||0),0);
-  const planned=plannedNonBills+plannedBills;
+  // Planned is based on the actual expense rows in THIS pay period,
+  // including recurring bills. This means changing a bill's Planned value
+  // immediately changes the Planned total and the Remaining surplus.
+  const planned=p.items.reduce((s,x)=>s+Number(x[1]||0),0);
   const actual=p.items.reduce((s,x)=>s+Number(x[2]||0),0);
   const totalIncome=(p.incomeItems||[]).reduce((s,x)=>s+Number(x.amount||0),0);
   p.income=totalIncome;
