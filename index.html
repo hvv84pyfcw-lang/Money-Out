@@ -144,7 +144,7 @@ function render(){
   $("periodname").textContent=p.label;
   $("income").textContent=money(totalIncome);
   $("planned").textContent=money(planned);
-  $("actual").textContent=money(actual);
+  $("actual").textContent=money(totalIncome-actual);
   const surplus=totalIncome-planned;
   $("remaining").textContent=money(surplus);
   $("remaining").className=surplus>0.004?"good":(surplus<-0.004?"bad":"neutral");
