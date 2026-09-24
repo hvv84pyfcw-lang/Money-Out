@@ -241,7 +241,8 @@ function addExpense(){
   $("modal").classList.add("open")
 }
 function addBill(){modalMode="bill";edit=-1;$("mtitle").textContent="Add Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" placeholder="Electric"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" placeholder="15"></div>`;$("modal").classList.add("open")}
-function editBill(i){modalMode="bill";edit=i;let b=data.bills[i];$("mtitle").textContent="Edit Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" value="${b[0]}"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" value="${b[1]}"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" value="${b[2]}"></div>`;$("modal").classList.add("open")}
+function editBill(i){modalMode="bill";edit=i;let b=data.bills[i];$("mtitle").textContent="Edit Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" value="${escapeHtml(b[0])}"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" value="${b[1]}"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" value="${b[2]}"></div><button class="deletebtn" type="button" onclick="deleteBill(${i})">Delete Recurring Bill</button>`;$("modal").classList.add("open")}
+function deleteBill(i){if(!confirm("Delete this recurring bill from the master list? This will not delete your other pay periods."))return;data.bills.splice(i,1);save();closeModal();render()}
 function saveModal(){
   let n=$("n").value.trim(),a=Number($("a").value)||0;
   if(!n)return;
