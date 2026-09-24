@@ -174,8 +174,7 @@ function render(){
   });
   out+=`<div class="cols total"><div class="cell">TOTAL</div><div class="cell">${money(planned)}</div><div class="cell">${money(actual)}</div><div class="cell">${money(planned-actual)}</div></div>`;
   $("rows").innerHTML=out;
-  const periodBillDays=new Set(billDatesForPeriod(p.label).map(x=>x.day));
-  const visibleBills=data.bills.map((b,i)=>[b,i]).filter(([b])=>periodBillDays.has(Number(b[2]))).sort((a,b)=>Number(a[0][2]||0)-Number(b[0][2]||0));
+  const visibleBills=data.bills.map((b,i)=>[b,i]).sort((a,b)=>Number(a[0][2]||0)-Number(b[0][2]||0));
   $("billrows").innerHTML=visibleBills.map(([b,i])=>`<div class="bill"><div class="billinfo"><div class="billname">${b[0]}</div><div class="billdue">Due ${b[2]}${ord(b[2])}</div></div><div class="billamount">${money(b[1])}</div><button class="tiny" onclick="editBill(${i})">Edit</button></div>`).join("") || '<div class="bill"><div class="billinfo"><div class="billname" style="color:var(--muted)">No recurring bills due in this pay period.</div></div></div>';
   save();
 }
