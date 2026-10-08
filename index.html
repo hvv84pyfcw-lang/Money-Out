@@ -71,7 +71,7 @@ data.periods.forEach(p=>{
     p.incomeItems=old ? [{id:"legacy-"+Math.random().toString(36).slice(2),name:"Income",amount:old}] : [];
   }
 });
-let pi=0,modalMode="",edit=-1;
+let pi=Math.max(0,data.periods.length-1),modalMode="",edit=-1;
 const $=x=>document.getElementById(x);
 const money=n=>"$"+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 
