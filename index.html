@@ -166,8 +166,8 @@ function render(){
       const d=Number(x[1]||0)-Number(x[2]||0);
       out+=`<div class="cols">
         <div class="cell"><button class="rowedit" onclick="editExpense(${i})">✎ ${x[0]}</button></div>
-        <div class="cell"><input class="money" inputmode="decimal" value="${x[1]??''}" onchange="setItem(${i},1,this.value)"></div>
-        <div class="cell"><input class="money" inputmode="decimal" placeholder="—" value="${x[2]??''}" onchange="setItem(${i},2,this.value)"></div>
+        <div class="cell"><input class="money" inputmode="decimal" onfocus="this.select()" value="${x[1]??''}" onchange="setItem(${i},1,this.value)"></div>
+        <div class="cell"><input class="money" inputmode="decimal" onfocus="this.select()" placeholder="—" value="${x[2]??''}" onchange="setItem(${i},2,this.value)"></div>
         <div class="cell diff ${d>=0?'good':'bad'}">${Math.abs(d)<.005?'—':(d>0?'+':'')+money(d)}</div>
       </div>`;
     });
@@ -180,20 +180,42 @@ function render(){
 }
 
 function ord(n){return n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"}
-function setItem(i,k,v){data.periods[pi].items[i][k]=v===""?"":Number(v);save();render()}
+function setItem(i,k,v){
+  const p=data.periods[pi];
+  p.items[i][k]=v===""?"":Number(v);
+  save();
+  // Update totals in place instead of rebuilding the expense rows. Re-rendering
+  // here dismisses the iPhone number pad and can make the next field need two taps.
+  const planned=p.items.reduce((s,x)=>s+Number(x[1]||0),0);
+  const actual=p.items.reduce((s,x)=>s+Number(x[2]||0),0);
+  const income=(p.incomeItems||[]).reduce((s,x)=>s+Number(x.amount||0),0);
+  $("planned").textContent=money(planned);
+  $("actual").textContent=money(income-actual);
+  const surplus=income-planned;
+  $("remaining").textContent=money(surplus);
+  $("remaining").className=surplus>0.004?"good":(surplus<-0.004?"bad":"neutral");
+  const row=document.querySelectorAll("#rows .cols:not(.section):not(.total)")[i];
+  if(row){
+    const d=Number(p.items[i][1]||0)-Number(p.items[i][2]||0);
+    const diff=row.querySelector(".diff");
+    if(diff){diff.textContent=Math.abs(d)<.005?"—":(d>0?"+":"")+money(d);diff.className="cell diff "+(d>=0?"good":"bad");}
+  }
+  const total=document.querySelector("#rows .cols.total");
+  if(total){const cells=total.querySelectorAll(".cell");cells[1].textContent=money(planned);cells[2].textContent=money(actual);cells[3].textContent=money(planned-actual);}
+}
 function move(n){pi=Math.max(0,Math.min(data.periods.length-1,pi+n));render()}
 function incomeEdit(){addIncome()}
 function escapeHtml(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
 function addIncome(){
   modalMode="income";edit=-1;
   $("mtitle").textContent="Add Income";
-  $("form").innerHTML=`<div class="field"><label>Income source</label><input id="n" placeholder="Work, overtime, reimbursement, etc."></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" placeholder="0.00"></div>`;
+  $("form").innerHTML=`<div class="field"><label>Income source</label><input id="n" placeholder="Work, overtime, reimbursement, etc."></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" onfocus="this.select()" placeholder="0.00"></div>`;
   $("modal").classList.add("open")
 }
 function editIncome(i){
   modalMode="income";edit=i;const x=data.periods[pi].incomeItems[i];
   $("mtitle").textContent="Edit Income";
-  $("form").innerHTML=`<div class="field"><label>Income source</label><input id="n" value="${escapeHtml(x.name)}"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" value="${x.amount??0}"></div><button class="deletebtn" type="button" onclick="deleteIncome(${i})">Delete Income</button>`;
+  $("form").innerHTML=`<div class="field"><label>Income source</label><input id="n" value="${escapeHtml(x.name)}"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" onfocus="this.select()" value="${x.amount??0}"></div><button class="deletebtn" type="button" onclick="deleteIncome(${i})">Delete Income</button>`;
   $("modal").classList.add("open")
 }
 function deleteIncome(i){if(!confirm("Delete this income?"))return;data.periods[pi].incomeItems.splice(i,1);data.periods[pi].income=data.periods[pi].incomeItems.reduce((s,x)=>s+Number(x.amount||0),0);save();closeModal();render()}
@@ -230,18 +252,18 @@ function editExpense(i){
   modalMode="expense";edit=i;
   const x=data.periods[pi].items[i];
   $("mtitle").textContent="Edit Expense";
-  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" value="${String(x[0]).replaceAll('"','&quot;')}"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" value="${x[1]??''}"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" value="${x[2]??''}"></div><div class="field"><label>Section</label><select id="c"><option value="gray" ${x[3]==='gray'?'selected':''}>Gray / Fixed</option><option value="yellow" ${x[3]==='yellow'?'selected':''}>Zack’s Expenses</option><option value="pink" ${x[3]==='pink'?'selected':''}>Nicole’s Expenses</option><option value="blue" ${x[3]==='blue'?'selected':''}>Miscellaneous</option><option value="bills" ${x[3]==='bills'?'selected':''}>Bills</option><option value="unexpected" ${x[3]==='unexpected'?'selected':''}>Unexpected Expenses</option></select></div><button class="deletebtn" type="button" onclick="deleteExpense(${i})">Delete Expense</button>`;
+  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" value="${String(x[0]).replaceAll('"','&quot;')}"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" onfocus="this.select()" value="${x[1]??''}"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" onfocus="this.select()" value="${x[2]??''}"></div><div class="field"><label>Section</label><select id="c"><option value="gray" ${x[3]==='gray'?'selected':''}>Gray / Fixed</option><option value="yellow" ${x[3]==='yellow'?'selected':''}>Zack’s Expenses</option><option value="pink" ${x[3]==='pink'?'selected':''}>Nicole’s Expenses</option><option value="blue" ${x[3]==='blue'?'selected':''}>Miscellaneous</option><option value="bills" ${x[3]==='bills'?'selected':''}>Bills</option><option value="unexpected" ${x[3]==='unexpected'?'selected':''}>Unexpected Expenses</option></select></div><button class="deletebtn" type="button" onclick="deleteExpense(${i})">Delete Expense</button>`;
   $("modal").classList.add("open")
 }
 function deleteExpense(i){if(!confirm("Delete this expense?"))return;data.periods[pi].items.splice(i,1);save();closeModal();render()}
 function addExpense(){
   modalMode="expense";edit=-1;
   $("mtitle").textContent="Add Expense";
-  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" placeholder="Groceries"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Section</label><select id="c"><option value="gray">Gray / Fixed</option><option value="yellow">Zack’s Expenses</option><option value="pink">Nicole’s Expenses</option><option value="blue">Miscellaneous</option><option value="bills">Bills</option><option value="unexpected">Unexpected Expenses</option></select></div>`;
+  $("form").innerHTML=`<div class="field"><label>Name</label><input id="n" placeholder="Groceries"></div><div class="field"><label>Planned</label><input id="a" inputmode="decimal" onfocus="this.select()" placeholder="0.00"></div><div class="field"><label>Actual</label><input id="b" inputmode="decimal" onfocus="this.select()" placeholder="0.00"></div><div class="field"><label>Section</label><select id="c"><option value="gray">Gray / Fixed</option><option value="yellow">Zack’s Expenses</option><option value="pink">Nicole’s Expenses</option><option value="blue">Miscellaneous</option><option value="bills">Bills</option><option value="unexpected">Unexpected Expenses</option></select></div>`;
   $("modal").classList.add("open")
 }
-function addBill(){modalMode="bill";edit=-1;$("mtitle").textContent="Add Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" placeholder="Electric"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" placeholder="15"></div>`;$("modal").classList.add("open")}
-function editBill(i){modalMode="bill";edit=i;let b=data.bills[i];$("mtitle").textContent="Edit Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" value="${escapeHtml(b[0])}"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" value="${b[1]}"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" value="${b[2]}"></div><button class="deletebtn" type="button" onclick="deleteBill(${i})">Delete Recurring Bill</button>`;$("modal").classList.add("open")}
+function addBill(){modalMode="bill";edit=-1;$("mtitle").textContent="Add Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" placeholder="Electric"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" onfocus="this.select()" placeholder="0.00"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" placeholder="15"></div>`;$("modal").classList.add("open")}
+function editBill(i){modalMode="bill";edit=i;let b=data.bills[i];$("mtitle").textContent="Edit Recurring Bill";$("form").innerHTML=`<div class="field"><label>Bill</label><input id="n" value="${escapeHtml(b[0])}"></div><div class="field"><label>Amount</label><input id="a" inputmode="decimal" onfocus="this.select()" value="${b[1]}"></div><div class="field"><label>Due day</label><input id="c" inputmode="numeric" value="${b[2]}"></div><button class="deletebtn" type="button" onclick="deleteBill(${i})">Delete Recurring Bill</button>`;$("modal").classList.add("open")}
 function deleteBill(i){if(!confirm("Delete this recurring bill from the master list? This will not delete your other pay periods."))return;data.bills.splice(i,1);save();closeModal();render()}
 function saveModal(){
   let n=$("n").value.trim(),a=Number($("a").value)||0;
