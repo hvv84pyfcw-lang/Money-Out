@@ -164,7 +164,7 @@ function render(){
     out+=`<div class="cols section ${g[0]}"><div class="cell">${g[1]}</div></div>`;
     arr.forEach(([x,i])=>{
       const d=Number(x[1]||0)-Number(x[2]||0);
-      out+=`<div class="cols">
+      out+=`<div class="cols" data-item-index="${i}">
         <div class="cell"><button class="rowedit" onclick="editExpense(${i})">✎ ${x[0]}</button></div>
         <div class="cell"><input class="money" inputmode="decimal" onfocus="this.select()" value="${x[1]??''}" onchange="setItem(${i},1,this.value)"></div>
         <div class="cell"><input class="money" inputmode="decimal" onfocus="this.select()" placeholder="—" value="${x[2]??''}" onchange="setItem(${i},2,this.value)"></div>
@@ -194,7 +194,9 @@ function setItem(i,k,v){
   const surplus=income-planned;
   $("remaining").textContent=money(surplus);
   $("remaining").className=surplus>0.004?"good":(surplus<-0.004?"bad":"neutral");
-  const row=document.querySelectorAll("#rows .cols:not(.section):not(.total)")[i];
+  // Locate the rendered row by its original item index. Visible row order can
+  // differ from p.items because rows are grouped by category.
+  const row=document.querySelector(`#rows .cols[data-item-index="${i}"]`);
   if(row){
     const d=Number(p.items[i][1]||0)-Number(p.items[i][2]||0);
     const diff=row.querySelector(".diff");
